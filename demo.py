@@ -74,7 +74,7 @@ def get_parser():
         help="path to mivolo checkpoint",
     )
     parser.add_argument(
-        "--fps", default=None, type=float, required=False, help="video fps"
+        "--fps", default=None, type=int, required=False, help="video fps"
     )
 
     parser.add_argument(
@@ -133,8 +133,7 @@ def main():
             outfilename = os.path.join(args.output, f"out_{bname}.mp4")
             res, fps = get_local_video_info(args.input)
 
-        fps = None
-        if args.fps:
+        if args.fps is not None:
             fps = fps
 
         if args.draw:
