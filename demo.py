@@ -134,7 +134,7 @@ def main():
             res, fps = get_local_video_info(args.input)
 
         if args.fps is not None:
-            fps = fps
+            fps = args.fps
 
         if args.draw:
             fourcc = cv2.VideoWriter_fourcc(*"mp4v")
