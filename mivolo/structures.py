@@ -31,7 +31,10 @@ class PersonAndFaceCrops:
         self.crops_persons_wo_face: Dict[int, np.ndarray] = {}
 
     def _add_to_output(
-        self, crops: Dict[int, np.ndarray], out_crops: List[np.ndarray], out_crop_inds: List[Optional[int]]
+        self,
+        crops: Dict[int, np.ndarray],
+        out_crops: List[np.ndarray],
+        out_crop_inds: List[Optional[int]],
     ):
         inds_to_add = list(crops.keys())
         crops_to_add = list(crops.values())
@@ -59,7 +62,11 @@ class PersonAndFaceCrops:
         faces_crops: List[Optional[np.ndarray]] = []
 
         if not use_faces:
-            add_none_to_output(faces_inds, faces_crops, len(self.crops_persons) + len(self.crops_persons_wo_face))
+            add_none_to_output(
+                faces_inds,
+                faces_crops,
+                len(self.crops_persons) + len(self.crops_persons_wo_face),
+            )
             return faces_inds, faces_crops
 
         self._add_to_output(self.crops_faces, faces_crops, faces_inds)
@@ -91,7 +98,11 @@ class PersonAndFaceCrops:
         bodies_crops: List[Optional[np.ndarray]] = []
 
         if not use_persons:
-            add_none_to_output(bodies_inds, bodies_crops, len(self.crops_faces) + len(self.crops_faces_wo_body))
+            add_none_to_output(
+                bodies_inds,
+                bodies_crops,
+                len(self.crops_faces) + len(self.crops_faces_wo_body),
+            )
             return bodies_inds, bodies_crops
 
         self._add_to_output(self.crops_persons, bodies_crops, bodies_inds)
@@ -117,7 +128,12 @@ class PersonAndFaceCrops:
     def save(self, out_dir="output"):
         ind = 0
         os.makedirs(out_dir, exist_ok=True)
-        for crops in [self.crops_persons, self.crops_faces, self.crops_faces_wo_body, self.crops_persons_wo_face]:
+        for crops in [
+            self.crops_persons,
+            self.crops_faces,
+            self.crops_faces_wo_body,
+            self.crops_persons_wo_face,
+        ]:
             for crop in crops.values():
                 if crop is None:
                     continue
@@ -128,13 +144,14 @@ class PersonAndFaceCrops:
 
 class PersonAndFaceResult:
     def __init__(self, results: Results):
-
         self.yolo_results = results
         names = set(results.names.values())
         assert "person" in names and "face" in names
 
         # initially no faces and persons are associated to each other
-        self.face_to_person_map: Dict[int, Optional[int]] = {ind: None for ind in self.get_bboxes_inds("face")}
+        self.face_to_person_map: Dict[int, Optional[int]] = {
+            ind: None for ind in self.get_bboxes_inds("face")
+        }
         self.unassigned_persons_inds: List[int] = self.get_bboxes_inds("person")
         n_objects = len(self.yolo_results.boxes)
         self.ages: List[Optional[float]] = [None for _ in range(n_objects)]
@@ -233,7 +250,11 @@ class PersonAndFaceResult:
             for bb_ind, (d, age, gender, gender_score) in enumerate(
                 zip(pred_boxes, self.ages, self.genders, self.gender_scores)
             ):
-                c, conf, guid = int(d.cls), float(d.conf) if conf else None, None if d.id is None else int(d.id.item())
+                c, conf, guid = (
+                    int(d.cls),
+                    float(d.conf) if conf else None,
+                    None if d.id is None else int(d.id.item()),
+                )
                 name = ("" if guid is None else f"id:{guid} ") + names[c]
                 label = (f"{name} {conf:.2f}" if conf else name) if labels else None
                 if ages and age is not None:
@@ -242,11 +263,15 @@ class PersonAndFaceResult:
                     label += f" {'F' if gender == 'female' else 'M'}"
                 if gender_probs and gender_score is not None:
                     label += f" ({gender_score:.1f})"
-                annotator.box_label(d.xyxy.squeeze(), label, color=colors(colors_by_ind[bb_ind], True))
+                annotator.box_label(
+                    d.xyxy.squeeze(), label, color=colors(colors_by_ind[bb_ind], True)
+                )
 
         if pred_probs is not None and show_probs:
             text = f"{', '.join(f'{names[j] if names else j} {pred_probs.data[j]:.2f}' for j in pred_probs.top5)}, "
-            annotator.text((32, 32), text, txt_color=(255, 255, 255))  # TODO: allow setting colors
+            annotator.text(
+                (32, 32), text, txt_color=(255, 255, 255)
+            )  # TODO: allow setting colors
 
         return annotator.result()
 
@@ -292,7 +317,9 @@ class PersonAndFaceResult:
             return -1
         return obj_id.item()
 
-    def get_bbox_by_ind(self, ind: int, im_h: int = None, im_w: int = None) -> torch.tensor:
+    def get_bbox_by_ind(
+        self, ind: int, im_h: int = None, im_w: int = None
+    ) -> torch.tensor:
         bb = self.yolo_results.boxes[ind].xyxy.squeeze().type(torch.int32)
         if im_h is not None and im_w is not None:
             bb[0] = torch.clamp(bb[0], min=0, max=im_w - 1)
@@ -317,13 +344,28 @@ class PersonAndFaceResult:
         pguid: int = -1,
         minimum_sample_size: int = 10,
     ) -> AGE_GENDER_TYPE:
-
         assert fguid != -1 or pguid != -1, "Incorrect tracking behaviour"
 
-        face_ages = [r[0] for r in tracked_objects[fguid] if r[0] is not None] if fguid in tracked_objects else []
-        face_genders = [r[1] for r in tracked_objects[fguid] if r[1] is not None] if fguid in tracked_objects else []
-        person_ages = [r[0] for r in tracked_objects[pguid] if r[0] is not None] if pguid in tracked_objects else []
-        person_genders = [r[1] for r in tracked_objects[pguid] if r[1] is not None] if pguid in tracked_objects else []
+        face_ages = (
+            [r[0] for r in tracked_objects[fguid] if r[0] is not None]
+            if fguid in tracked_objects
+            else []
+        )
+        face_genders = (
+            [r[1] for r in tracked_objects[fguid] if r[1] is not None]
+            if fguid in tracked_objects
+            else []
+        )
+        person_ages = (
+            [r[0] for r in tracked_objects[pguid] if r[0] is not None]
+            if pguid in tracked_objects
+            else []
+        )
+        person_genders = (
+            [r[1] for r in tracked_objects[pguid] if r[1] is not None]
+            if pguid in tracked_objects
+            else []
+        )
 
         if not face_ages and not person_ages:  # both empty
             return None, None
@@ -350,7 +392,9 @@ class PersonAndFaceResult:
 
         return age, gender
 
-    def get_results_for_tracking(self) -> Tuple[Dict[int, AGE_GENDER_TYPE], Dict[int, AGE_GENDER_TYPE]]:
+    def get_results_for_tracking(
+        self,
+    ) -> Tuple[Dict[int, AGE_GENDER_TYPE], Dict[int, AGE_GENDER_TYPE]]:
         """
         Get objects from current frame
         """
@@ -359,7 +403,9 @@ class PersonAndFaceResult:
 
         names = self.yolo_results.names
         pred_boxes = self.yolo_results.boxes
-        for _, (det, age, gender, _) in enumerate(zip(pred_boxes, self.ages, self.genders, self.gender_scores)):
+        for _, (det, age, gender, _) in enumerate(
+            zip(pred_boxes, self.ages, self.genders, self.gender_scores)
+        ):
             if det.id is None:
                 continue
             cat_id, _, guid = int(det.cls), float(det.conf), int(det.id.item())
@@ -375,23 +421,35 @@ class PersonAndFaceResult:
         face_bboxes_inds: List[int] = self.get_bboxes_inds("face")
         person_bboxes_inds: List[int] = self.get_bboxes_inds("person")
 
-        face_bboxes: List[torch.tensor] = [self.get_bbox_by_ind(ind) for ind in face_bboxes_inds]
-        person_bboxes: List[torch.tensor] = [self.get_bbox_by_ind(ind) for ind in person_bboxes_inds]
+        face_bboxes: List[torch.tensor] = [
+            self.get_bbox_by_ind(ind) for ind in face_bboxes_inds
+        ]
+        person_bboxes: List[torch.tensor] = [
+            self.get_bbox_by_ind(ind) for ind in person_bboxes_inds
+        ]
 
         self.face_to_person_map = {ind: None for ind in face_bboxes_inds}
-        assigned_faces, unassigned_persons_inds = assign_faces(person_bboxes, face_bboxes)
+        assigned_faces, unassigned_persons_inds = assign_faces(
+            person_bboxes, face_bboxes
+        )
 
         for face_ind, person_ind in enumerate(assigned_faces):
             face_ind = face_bboxes_inds[face_ind]
-            person_ind = person_bboxes_inds[person_ind] if person_ind is not None else None
+            person_ind = (
+                person_bboxes_inds[person_ind] if person_ind is not None else None
+            )
             self.face_to_person_map[face_ind] = person_ind
 
-        self.unassigned_persons_inds = [person_bboxes_inds[person_ind] for person_ind in unassigned_persons_inds]
+        self.unassigned_persons_inds = [
+            person_bboxes_inds[person_ind] for person_ind in unassigned_persons_inds
+        ]
 
     def crop_object(
-        self, full_image: np.ndarray, ind: int, cut_other_classes: Optional[List[str]] = None
+        self,
+        full_image: np.ndarray,
+        ind: int,
+        cut_other_classes: Optional[List[str]] = None,
     ) -> Optional[np.ndarray]:
-
         IOU_THRESH = 0.000001
         MIN_PERSON_CROP_AFTERCUT_RATIO = 0.4
         CROP_ROUND_RATE = 0.3
@@ -404,7 +462,9 @@ class PersonAndFaceResult:
         obj_image = full_image[y1:y2, x1:x2].copy()
         crop_h, crop_w = obj_image.shape[:2]
 
-        if cur_cat == "person" and (crop_h < MIN_PERSON_SIZE or crop_w < MIN_PERSON_SIZE):
+        if cur_cat == "person" and (
+            crop_h < MIN_PERSON_SIZE or crop_w < MIN_PERSON_SIZE
+        ):
             return None
 
         if not cut_other_classes:
@@ -412,15 +472,24 @@ class PersonAndFaceResult:
 
         # calc iou between obj_bbox and other bboxes
         other_bboxes: List[torch.tensor] = [
-            self.get_bbox_by_ind(other_ind, *full_image.shape[:2]) for other_ind in range(len(self.yolo_results.boxes))
+            self.get_bbox_by_ind(other_ind, *full_image.shape[:2])
+            for other_ind in range(len(self.yolo_results.boxes))
         ]
 
-        iou_matrix = box_iou(torch.stack([obj_bbox]), torch.stack(other_bboxes)).cpu().numpy()[0]
+        iou_matrix = (
+            box_iou(torch.stack([obj_bbox]), torch.stack(other_bboxes)).cpu().numpy()[0]
+        )
 
         # cut out other objects in case of intersection
-        for other_ind, (det, iou) in enumerate(zip(self.yolo_results.boxes, iou_matrix)):
+        for other_ind, (det, iou) in enumerate(
+            zip(self.yolo_results.boxes, iou_matrix)
+        ):
             other_cat = self.yolo_results.names[int(det.cls)]
-            if ind == other_ind or iou < IOU_THRESH or other_cat not in cut_other_classes:
+            if (
+                ind == other_ind
+                or iou < IOU_THRESH
+                or other_cat not in cut_other_classes
+            ):
                 continue
             o_x1, o_y1, o_x2, o_y2 = det.xyxy.squeeze().type(torch.int32)
 
@@ -442,14 +511,15 @@ class PersonAndFaceResult:
 
             obj_image[o_y1:o_y2, o_x1:o_x2] = 0
 
-        remain_ratio = np.count_nonzero(obj_image) / (obj_image.shape[0] * obj_image.shape[1] * obj_image.shape[2])
+        remain_ratio = np.count_nonzero(obj_image) / (
+            obj_image.shape[0] * obj_image.shape[1] * obj_image.shape[2]
+        )
         if remain_ratio < MIN_PERSON_CROP_AFTERCUT_RATIO:
             return None
 
         return obj_image
 
     def collect_crops(self, image) -> PersonAndFaceCrops:
-
         crops_data = PersonAndFaceCrops()
         for face_ind, person_ind in self.face_to_person_map.items():
             face_image = self.crop_object(image, face_ind, cut_other_classes=[])
@@ -458,13 +528,17 @@ class PersonAndFaceResult:
                 crops_data.crops_faces_wo_body[face_ind] = face_image
                 continue
 
-            person_image = self.crop_object(image, person_ind, cut_other_classes=["face", "person"])
+            person_image = self.crop_object(
+                image, person_ind, cut_other_classes=["face", "person"]
+            )
 
             crops_data.crops_faces[face_ind] = face_image
             crops_data.crops_persons[person_ind] = person_image
 
         for person_ind in self.unassigned_persons_inds:
-            person_image = self.crop_object(image, person_ind, cut_other_classes=["face", "person"])
+            person_image = self.crop_object(
+                image, person_ind, cut_other_classes=["face", "person"]
+            )
             crops_data.crops_persons_wo_face[person_ind] = person_image
 
         # uncomment to save preprocessed crops
