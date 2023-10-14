@@ -9,7 +9,10 @@ from setuptools import find_packages, setup
 FILE = Path(__file__).resolve()
 PARENT = FILE.parent  # root directory
 README = (PARENT / "README.md").read_text(encoding="utf-8")
-REQUIREMENTS = [f"{x.name}{x.specifier}" for x in pkg.parse_requirements((PARENT / "requirements.txt").read_text())]
+REQUIREMENTS = [
+    f"{x.name}{x.specifier}"
+    for x in pkg.parse_requirements((PARENT / "requirements.txt").read_text())
+]
 
 
 exec(open("mivolo/version.py").read())
@@ -24,7 +27,9 @@ setup(
     project_urls={"Datasets": "https://wildchlamydia.github.io/lagenda/"},
     author="Layer Team, SberDevices",
     author_email="mvkuprashevich@gmail.com, irinakr4snova@gmail.com",
-    packages=find_packages(include=["mivolo", "mivolo.model", "mivolo.data", "mivolo.data.dataset"]),  # required
+    packages=find_packages(
+        include=["mivolo", "mivolo.model", "mivolo.data", "mivolo.data.dataset"]
+    ),  # required
     include_package_data=True,
     install_requires=REQUIREMENTS,
     classifiers=[

@@ -44,7 +44,11 @@ def read_json_annotations(annotations: List[str], splits: List[str]) -> Dict[str
         if "alignment_source" in face and face["alignment_source"] == "file not found":
             missed += 1
 
-        annotations_per_image[im_name] = {"age": str(face["age"]), "gender": gender, "split": split}
+        annotations_per_image[im_name] = {
+            "age": str(face["age"]),
+            "gender": gender,
+            "split": split,
+        }
 
     print("missed annots: ", missed)
 
@@ -131,7 +135,9 @@ def collect_faces(
     os.makedirs(out_dir, exist_ok=True)
 
     # load annotations
-    images_per_split: Dict[str, List[PictureInfo]] = read_data(faces_dir, annotations, splits)
+    images_per_split: Dict[str, List[PictureInfo]] = read_data(
+        faces_dir, annotations, splits
+    )
 
     for split_ind, (split, images) in enumerate(images_per_split.items()):
         print(f"Processing {split} split ({split_ind}/{len(images_per_split)})...")
@@ -141,7 +147,9 @@ def collect_faces(
             other_faces: List[PictureInfo] = []
 
             detector_weights, device = detector_cfg["weights"], detector_cfg["device"]
-            detector = Detector(detector_weights, device, verbose=False, conf_thresh=0.1, iou_thresh=0.2)
+            detector = Detector(
+                detector_weights, device, verbose=False, conf_thresh=0.1, iou_thresh=0.2
+            )
             for image_info in tqdm.tqdm(images, desc="Detecting faces: "):
                 cv_im = cv2.imread(image_info.image_path)
                 im_h, im_w = cv_im.shape[:2]
@@ -150,7 +158,9 @@ def collect_faces(
                 coarse_face_bbox = [pad_x, pad_y, im_w - pad_x, im_h - pad_y]  # xyxy
 
                 detected_objects: PersonAndFaceResult = detector.predict(cv_im)
-                main_bbox, other_faces_inds = get_main_face(detected_objects, coarse_face_bbox)
+                main_bbox, other_faces_inds = get_main_face(
+                    detected_objects, coarse_face_bbox
+                )
 
                 if len(other_faces_inds):
                     images_with_other_faces += 1
@@ -165,14 +175,20 @@ def collect_faces(
 
                 if find_persons:
                     additional_faces, additional_persons = find_persons_on_image(
-                        image_info, main_bbox, detected_objects, other_faces_inds, device
+                        image_info,
+                        main_bbox,
+                        detected_objects,
+                        other_faces_inds,
+                        device,
                     )
                     # add all additional faces
                     other_faces.extend(additional_faces)
                     # add persons with empty faces
                     other_faces.extend(additional_persons)
                 else:
-                    additional_faces = get_additional_bboxes(detected_objects, other_faces_inds, image_info.image_path)
+                    additional_faces = get_additional_bboxes(
+                        detected_objects, other_faces_inds, image_info.image_path
+                    )
                     other_faces.extend(additional_faces)
                     # full image as a person bbox
                     coarse_person_bbox = [0, 0, im_w, im_h]  # xyxy
@@ -187,7 +203,6 @@ def collect_faces(
 
         else:
             for image_info in tqdm.tqdm(images, desc="Collect face bboxes: "):
-
                 cv_im = cv2.imread(image_info.image_path)
                 im_h, im_w = cv_im.shape[:2]
 
@@ -197,10 +212,21 @@ def collect_faces(
 
                 if use_coarse_persons or find_persons:
                     # full image as a person bbox
-                    pad_x_p, pad_y_p = int(person_padding * im_w), int(person_padding * im_h)
-                    image_info.person_bbox = [pad_x_p, pad_y_p, im_w - pad_x_p, im_h]  # xyxy
+                    pad_x_p, pad_y_p = int(person_padding * im_w), int(
+                        person_padding * im_h
+                    )
+                    image_info.person_bbox = [
+                        pad_x_p,
+                        pad_y_p,
+                        im_w - pad_x_p,
+                        im_h,
+                    ]  # xyxy
 
-        save_annotations(images, faces_dir, out_file=os.path.join(out_dir, f"{db_name}_{split}_annotations.csv"))
+        save_annotations(
+            images,
+            faces_dir,
+            out_file=os.path.join(out_dir, f"{db_name}_{split}_annotations.csv"),
+        )
 
 
 def get_parser():
@@ -213,15 +239,24 @@ def get_parser():
         help="path to dataset with CACD200 folder",
     )
     parser.add_argument(
-        "--detector_weights", default=None, type=str, required=False, help="path to face and person detector"
+        "--detector_weights",
+        default=None,
+        type=str,
+        required=False,
+        help="path to face and person detector",
     )
-    parser.add_argument("--device", default="cuda:0", type=str, required=False, help="device to inference detector")
+    parser.add_argument(
+        "--device",
+        default="cuda:0",
+        type=str,
+        required=False,
+        help="device to inference detector",
+    )
 
     return parser
 
 
 if __name__ == "__main__":
-
     parser = get_parser()
     args = parser.parse_args()
 

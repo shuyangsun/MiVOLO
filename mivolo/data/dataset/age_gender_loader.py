@@ -42,11 +42,15 @@ def adapt_to_chs(x, n):
         # doubled channels
         if len(x) * 2 == n:
             x = np.concatenate((x, x))
-            _logger.warning(f"Pretrained mean/std different shape than model (doubled channes), using concat: {x}.")
+            _logger.warning(
+                f"Pretrained mean/std different shape than model (doubled channes), using concat: {x}."
+            )
         else:
             x_mean = np.mean(x).item()
             x = (x_mean,) * n
-            _logger.warning(f"Pretrained mean/std different shape than model, using avg value {x}.")
+            _logger.warning(
+                f"Pretrained mean/std different shape than model, using avg value {x}."
+            )
     else:
         assert len(x) == n, "normalization stats must match image channels"
     return x
@@ -62,7 +66,6 @@ class PrefetchLoaderForMultiInput(PrefetchLoader):
         device=torch.device("cuda"),
         img_dtype=torch.float32,
     ):
-
         mean = adapt_to_chs(mean, channels)
         std = adapt_to_chs(std, channels)
         normalization_shape = (1, channels, 1, 1)
@@ -70,8 +73,12 @@ class PrefetchLoaderForMultiInput(PrefetchLoader):
         self.loader = loader
         self.device = device
         self.img_dtype = img_dtype
-        self.mean = torch.tensor([x * 255 for x in mean], device=device, dtype=img_dtype).view(normalization_shape)
-        self.std = torch.tensor([x * 255 for x in std], device=device, dtype=img_dtype).view(normalization_shape)
+        self.mean = torch.tensor(
+            [x * 255 for x in mean], device=device, dtype=img_dtype
+        ).view(normalization_shape)
+        self.std = torch.tensor(
+            [x * 255 for x in std], device=device, dtype=img_dtype
+        ).view(normalization_shape)
 
         self.is_cuda = torch.cuda.is_available() and device.type == "cuda"
 
@@ -85,11 +92,12 @@ class PrefetchLoaderForMultiInput(PrefetchLoader):
             stream_context = suppress
 
         for next_input, next_target in self.loader:
-
             with stream_context():
                 next_input = next_input.to(device=self.device, non_blocking=True)
                 next_target = next_target.to(device=self.device, non_blocking=True)
-                next_input = next_input.to(self.img_dtype).sub_(self.mean).div_(self.std)
+                next_input = (
+                    next_input.to(self.img_dtype).sub_(self.mean).div_(self.std)
+                )
 
             if not first:
                 yield input, target  # noqa: F823, F821
@@ -121,7 +129,6 @@ def create_loader(
     worker_seeding="all",
     target_type=torch.int64,
 ):
-
     transform = create_transform(
         input_size,
         is_training=False,

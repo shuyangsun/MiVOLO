@@ -9,7 +9,13 @@ import torch
 import tqdm
 from mivolo.data.data_reader import PictureInfo, get_all_files
 from mivolo.modeling.yolo_detector import Detector, PersonAndFaceResult
-from preparation_utils import assign_persons, associate_persons, get_additional_bboxes, get_main_face, save_annotations
+from preparation_utils import (
+    assign_persons,
+    associate_persons,
+    get_additional_bboxes,
+    get_main_face,
+    save_annotations,
+)
 
 
 def read_fairface_annotations(annotations_files):
@@ -27,11 +33,17 @@ def read_fairface_annotations(annotations_files):
             gender = gender[0].upper() if isinstance(gender, str) else None
             age = age.replace("-", ";") if isinstance(age, str) else None
 
-            annotations_per_image[aligned_face_path] = {"age": age, "gender": gender, "split": split_name}
+            annotations_per_image[aligned_face_path] = {
+                "age": age,
+                "gender": gender,
+                "split": split_name,
+            }
     return annotations_per_image
 
 
-def read_data(images_dir, annotations_files) -> Tuple[List[PictureInfo], List[PictureInfo]]:
+def read_data(
+    images_dir, annotations_files
+) -> Tuple[List[PictureInfo], List[PictureInfo]]:
     dataset_pictures_train: List[PictureInfo] = []
     dataset_pictures_val: List[PictureInfo] = []
 
@@ -61,7 +73,9 @@ def read_data(images_dir, annotations_files) -> Tuple[List[PictureInfo], List[Pi
         else:
             raise ValueError(f"Unknown split name: {split}")
 
-    print(f"Found train/val images: {len(dataset_pictures_train)}/{len(dataset_pictures_val)}")
+    print(
+        f"Found train/val images: {len(dataset_pictures_train)}/{len(dataset_pictures_val)}"
+    )
     for split, stat_per_gender in splits_stat_per_gender.items():
         print(f"\n{split} Per gender images: {stat_per_gender}")
 
@@ -75,12 +89,16 @@ def read_data(images_dir, annotations_files) -> Tuple[List[PictureInfo], List[Pi
     return dataset_pictures_train, dataset_pictures_val
 
 
-def find_persons_on_image(image_info, main_bbox, detected_objects, other_faces_inds, device):
+def find_persons_on_image(
+    image_info, main_bbox, detected_objects, other_faces_inds, device
+):
     # find person_ind for each face (main + other_faces)
     all_faces: List[torch.tensor] = [torch.tensor(main_bbox).to(device)] + [
         detected_objects.get_bbox_by_ind(ind) for ind in other_faces_inds
     ]
-    faces_persons_map, other_persons_inds = associate_persons(all_faces, detected_objects)
+    faces_persons_map, other_persons_inds = associate_persons(
+        all_faces, detected_objects
+    )
 
     additional_faces: List[PictureInfo] = get_additional_bboxes(
         detected_objects, other_faces_inds, image_info.image_path
@@ -98,7 +116,9 @@ def find_persons_on_image(image_info, main_bbox, detected_objects, other_faces_i
     return additional_faces, additional_persons
 
 
-def main(faces_dir: str, annotations: List[str], data_dir: str, detector_cfg: dict = None):
+def main(
+    faces_dir: str, annotations: List[str], data_dir: str, detector_cfg: dict = None
+):
     """
     Generate a .txt annotation file with columns:
         ["img_name", "age", "gender",
@@ -116,15 +136,18 @@ def main(faces_dir: str, annotations: List[str], data_dir: str, detector_cfg: di
     # load annotations
     dataset_pictures_train, dataset_pictures_val = read_data(faces_dir, annotations)
 
-    for images, split_name in zip([dataset_pictures_train, dataset_pictures_val], ["train", "val"]):
-
+    for images, split_name in zip(
+        [dataset_pictures_train, dataset_pictures_val], ["train", "val"]
+    ):
         if detector_cfg:
             # detect faces with yolo detector
             faces_not_found, images_with_other_faces = 0, 0
             other_faces: List[PictureInfo] = []
 
             detector_weights, device = detector_cfg["weights"], detector_cfg["device"]
-            detector = Detector(detector_weights, device, verbose=False, conf_thresh=0.1, iou_thresh=0.2)
+            detector = Detector(
+                detector_weights, device, verbose=False, conf_thresh=0.1, iou_thresh=0.2
+            )
             for image_info in tqdm.tqdm(images, desc=f"Detecting {split_name} faces: "):
                 cv_im = cv2.imread(image_info.image_path)
                 im_h, im_w = cv_im.shape[:2]
@@ -132,7 +155,9 @@ def main(faces_dir: str, annotations: List[str], data_dir: str, detector_cfg: di
                 coarse_bbox = [125, 125, im_w - 125, im_h - 125]  # xyxy
 
                 detected_objects: PersonAndFaceResult = detector.predict(cv_im)
-                main_bbox, other_faces_inds = get_main_face(detected_objects, coarse_bbox)
+                main_bbox, other_faces_inds = get_main_face(
+                    detected_objects, coarse_bbox
+                )
                 if len(other_faces_inds):
                     images_with_other_faces += 1
 
@@ -165,7 +190,11 @@ def main(faces_dir: str, annotations: List[str], data_dir: str, detector_cfg: di
                 # all images are 448x448 and with 125 padding
                 image_info.bbox = [125, 125, im_w - 125, im_h - 125]  # xyxy
 
-        save_annotations(images, faces_dir, out_file=os.path.join(out_dir, f"{split_name}_annotations.csv"))
+        save_annotations(
+            images,
+            faces_dir,
+            out_file=os.path.join(out_dir, f"{split_name}_annotations.csv"),
+        )
 
 
 def get_parser():
@@ -178,15 +207,24 @@ def get_parser():
         help="path to folder with fairface-img-margin125-trainval/ and fairface_label_{split}.csv",
     )
     parser.add_argument(
-        "--detector_weights", default=None, type=str, required=False, help="path to face and person detector"
+        "--detector_weights",
+        default=None,
+        type=str,
+        required=False,
+        help="path to face and person detector",
     )
-    parser.add_argument("--device", default="cuda:0", type=str, required=False, help="device to inference detector")
+    parser.add_argument(
+        "--device",
+        default="cuda:0",
+        type=str,
+        required=False,
+        help="device to inference detector",
+    )
 
     return parser
 
 
 if __name__ == "__main__":
-
     parser = get_parser()
     args = parser.parse_args()
 
@@ -196,7 +234,10 @@ if __name__ == "__main__":
     if data_dir[-1] == "/":
         data_dir = data_dir[:-1]
 
-    annotations = [os.path.join(data_dir, "fairface_label_train.csv"), os.path.join(data_dir, "fairface_label_val.csv")]
+    annotations = [
+        os.path.join(data_dir, "fairface_label_train.csv"),
+        os.path.join(data_dir, "fairface_label_val.csv"),
+    ]
 
     detector_cfg: Optional[Dict[str, str]] = None
     if args.detector_weights is not None:

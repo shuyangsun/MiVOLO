@@ -19,14 +19,26 @@ def read_adience_annotations(annotations_files):
         fold_name = os.path.basename(file).split(".")[0]
         df = pd.read_csv(file, sep="\t", usecols=cols)
         for index, row in df.iterrows():
-            face_id, img_name, user_id = row["face_id"], row["original_image"], row["user_id"]
-            aligned_face_path = f"faces/{user_id}/coarse_tilt_aligned_face.{face_id}.{img_name}"
+            face_id, img_name, user_id = (
+                row["face_id"],
+                row["original_image"],
+                row["user_id"],
+            )
+            aligned_face_path = (
+                f"faces/{user_id}/coarse_tilt_aligned_face.{face_id}.{img_name}"
+            )
 
             age, gender = row["age"], row["gender"]
-            gender = gender.upper() if isinstance(gender, str) and gender != "u" else None
+            gender = (
+                gender.upper() if isinstance(gender, str) and gender != "u" else None
+            )
             age = age if isinstance(age, str) else None
 
-            annotations_per_image[aligned_face_path] = {"age": age, "gender": gender, "fold": fold_name}
+            annotations_per_image[aligned_face_path] = {
+                "age": age,
+                "gender": gender,
+                "fold": fold_name,
+            }
             stat_per_fold[fold_name] += 1
 
     print(f"Per fold images: {stat_per_fold}")
@@ -111,7 +123,9 @@ def read_data(images_dir, annotations_files, data_dir) -> List[PictureInfo]:
     return dataset_pictures
 
 
-def main(faces_dir: str, annotations: List[str], data_dir: str, detector_cfg: dict = None):
+def main(
+    faces_dir: str, annotations: List[str], data_dir: str, detector_cfg: dict = None
+):
     """
     Generate a .txt annotation file with columns:
         ["img_name", "age", "gender",
@@ -136,7 +150,9 @@ def main(faces_dir: str, annotations: List[str], data_dir: str, detector_cfg: di
         other_faces: List[PictureInfo] = []
 
         detector_weights, device = detector_cfg["weights"], detector_cfg["device"]
-        detector = Detector(detector_weights, device, verbose=False, conf_thresh=0.1, iou_thresh=0.2)
+        detector = Detector(
+            detector_weights, device, verbose=False, conf_thresh=0.1, iou_thresh=0.2
+        )
         for image_info in tqdm.tqdm(images, desc="Detecting faces: "):
             cv_im = cv2.imread(image_info.image_path)
             im_h, im_w = cv_im.shape[:2]
@@ -154,7 +170,9 @@ def main(faces_dir: str, annotations: List[str], data_dir: str, detector_cfg: di
             if len(other_bboxes_inds):
                 images_with_other_faces += 1
 
-            additional_faces = get_additional_bboxes(detected_objects, other_bboxes_inds, image_info.image_path)
+            additional_faces = get_additional_bboxes(
+                detected_objects, other_bboxes_inds, image_info.image_path
+            )
             other_faces.extend(additional_faces)
 
         print(f"Faces not detected: {faces_not_found}/{len(images)}")
@@ -170,7 +188,9 @@ def main(faces_dir: str, annotations: List[str], data_dir: str, detector_cfg: di
             im_h, im_w = cv_im.shape[:2]
             image_info.bbox = [0, 0, im_w, im_h]  # xyxy
 
-    save_annotations(images, faces_dir, out_file=os.path.join(out_dir, "adience_annotations.csv"))
+    save_annotations(
+        images, faces_dir, out_file=os.path.join(out_dir, "adience_annotations.csv")
+    )
 
 
 def get_parser():
@@ -183,15 +203,24 @@ def get_parser():
         help="path to dataset with faces/ and fold_{i}_data.txt files",
     )
     parser.add_argument(
-        "--detector_weights", default=None, type=str, required=False, help="path to face and person detector"
+        "--detector_weights",
+        default=None,
+        type=str,
+        required=False,
+        help="path to face and person detector",
     )
-    parser.add_argument("--device", default="cuda:0", type=str, required=False, help="device to inference detector")
+    parser.add_argument(
+        "--device",
+        default="cuda:0",
+        type=str,
+        required=False,
+        help="device to inference detector",
+    )
 
     return parser
 
 
 if __name__ == "__main__":
-
     parser = get_parser()
     args = parser.parse_args()
 

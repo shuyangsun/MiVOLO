@@ -9,7 +9,14 @@ from mivolo.model.yolo_detector import PersonAndFaceResult
 
 def save_annotations(images: List[PictureInfo], images_dir: str, out_file: str):
     def get_age_str(age: Optional[str]) -> str:
-        age = "-1" if age is None else age.replace("(", "").replace(")", "").replace(" ", "").replace(",", ";")
+        age = (
+            "-1"
+            if age is None
+            else age.replace("(", "")
+            .replace(")", "")
+            .replace(" ", "")
+            .replace(",", ";")
+        )
         return age
 
     def get_gender_str(gender: Optional[str]) -> str:
@@ -55,7 +62,9 @@ def save_annotations(images: List[PictureInfo], images_dir: str, out_file: str):
 
 
 def get_main_face(
-    detected_objects: PersonAndFaceResult, coarse_bbox: Optional[List[int]] = None, coarse_thresh: float = 0.2
+    detected_objects: PersonAndFaceResult,
+    coarse_bbox: Optional[List[int]] = None,
+    coarse_thresh: float = 0.2,
 ) -> Tuple[Optional[List[int]], List[int]]:
     """
     Returns:
@@ -67,26 +76,41 @@ def get_main_face(
         return None, []
 
     # sort found faces
-    face_bboxes_inds = sorted(face_bboxes_inds, key=lambda bb_ind: detected_objects.get_distance_to_center(bb_ind))
+    face_bboxes_inds = sorted(
+        face_bboxes_inds,
+        key=lambda bb_ind: detected_objects.get_distance_to_center(bb_ind),
+    )
     most_centered_bbox_ind = face_bboxes_inds[0]
-    main_bbox = detected_objects.get_bbox_by_ind(most_centered_bbox_ind).cpu().numpy().tolist()
+    main_bbox = (
+        detected_objects.get_bbox_by_ind(most_centered_bbox_ind).cpu().numpy().tolist()
+    )
 
     iou_matrix: List[float] = [1.0] + [0.0] * (len(face_bboxes_inds) - 1)
 
     if coarse_bbox is not None:
         # calc iou between coarse_bbox and found bboxes
         found_bboxes: List[torch.tensor] = [
-            detected_objects.get_bbox_by_ind(other_ind) for other_ind in face_bboxes_inds
+            detected_objects.get_bbox_by_ind(other_ind)
+            for other_ind in face_bboxes_inds
         ]
 
         iou_matrix = (
-            box_iou(torch.stack([torch.tensor(coarse_bbox)]), torch.stack(found_bboxes).cpu()).numpy()[0].tolist()
+            box_iou(
+                torch.stack([torch.tensor(coarse_bbox)]),
+                torch.stack(found_bboxes).cpu(),
+            )
+            .numpy()[0]
+            .tolist()
         )
 
     if iou_matrix[0] < coarse_thresh:
         # to avoid fp detections
         main_bbox = None
-        other_bboxes = [ind for i, ind in enumerate(face_bboxes_inds[1:]) if iou_matrix[i] < coarse_thresh]
+        other_bboxes = [
+            ind
+            for i, ind in enumerate(face_bboxes_inds[1:])
+            if iou_matrix[i] < coarse_thresh
+        ]
     else:
         other_bboxes = face_bboxes_inds[1:]
 
@@ -94,7 +118,10 @@ def get_main_face(
 
 
 def get_additional_bboxes(
-    detected_objects: PersonAndFaceResult, other_bboxes_inds: List[int], image_path: str, **kwargs
+    detected_objects: PersonAndFaceResult,
+    other_bboxes_inds: List[int],
+    image_path: str,
+    **kwargs,
 ) -> List[PictureInfo]:
     is_face = True if "is_person" not in kwargs else False
     is_person = False if "is_person" not in kwargs else True
@@ -102,19 +129,29 @@ def get_additional_bboxes(
     additional_data: List[PictureInfo] = []
     # extend other faces
     for other_ind in other_bboxes_inds:
-        other_box: List[int] = detected_objects.get_bbox_by_ind(other_ind).cpu().numpy().tolist()
+        other_box: List[int] = (
+            detected_objects.get_bbox_by_ind(other_ind).cpu().numpy().tolist()
+        )
         if is_face:
             additional_data.append(PictureInfo(image_path, None, None, other_box))
         elif is_person:
-            additional_data.append(PictureInfo(image_path, None, None, person_bbox=other_box))
+            additional_data.append(
+                PictureInfo(image_path, None, None, person_bbox=other_box)
+            )
     return additional_data
 
 
-def associate_persons(face_bboxes: List[torch.tensor], detected_objects: PersonAndFaceResult):
+def associate_persons(
+    face_bboxes: List[torch.tensor], detected_objects: PersonAndFaceResult
+):
     person_bboxes_inds: List[int] = detected_objects.get_bboxes_inds("person")
-    person_bboxes: List[torch.tensor] = [detected_objects.get_bbox_by_ind(ind) for ind in person_bboxes_inds]
+    person_bboxes: List[torch.tensor] = [
+        detected_objects.get_bbox_by_ind(ind) for ind in person_bboxes_inds
+    ]
 
-    face_to_person_map: Dict[int, Optional[int]] = {ind: None for ind in range(len(face_bboxes))}
+    face_to_person_map: Dict[int, Optional[int]] = {
+        ind: None for ind in range(len(face_bboxes))
+    }
 
     if len(person_bboxes) == 0:
         return face_to_person_map, []
@@ -125,16 +162,22 @@ def associate_persons(face_bboxes: List[torch.tensor], detected_objects: PersonA
         person_ind = person_bboxes_inds[person_ind] if person_ind is not None else None
         face_to_person_map[face_ind] = person_ind
 
-    unassigned_persons_inds = [person_bboxes_inds[person_ind] for person_ind in unassigned_persons_inds]
+    unassigned_persons_inds = [
+        person_bboxes_inds[person_ind] for person_ind in unassigned_persons_inds
+    ]
     return face_to_person_map, unassigned_persons_inds
 
 
 def assign_persons(
-    faces_info: List[PictureInfo], faces_persons_map: Dict[int, int], detected_objects: PersonAndFaceResult
+    faces_info: List[PictureInfo],
+    faces_persons_map: Dict[int, int],
+    detected_objects: PersonAndFaceResult,
 ):
     for face_ind, person_ind in faces_persons_map.items():
         if person_ind is None:
             continue
 
-        person_bbox = detected_objects.get_bbox_by_ind(person_ind).cpu().numpy().tolist()
+        person_bbox = (
+            detected_objects.get_bbox_by_ind(person_ind).cpu().numpy().tolist()
+        )
         faces_info[face_ind].person_bbox = person_bbox

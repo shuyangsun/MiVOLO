@@ -35,7 +35,8 @@ def _cfg(url="", **kwargs):
 
 default_cfgs = {
     "mivolo_d1_224": _cfg(
-        url="https://github.com/sail-sg/volo/releases/download/volo_1/d1_224_84.2.pth.tar", crop_pct=0.96
+        url="https://github.com/sail-sg/volo/releases/download/volo_1/d1_224_84.2.pth.tar",
+        crop_pct=0.96,
     ),
     "mivolo_d1_384": _cfg(
         url="https://github.com/sail-sg/volo/releases/download/volo_1/d1_384_85.2.pth.tar",
@@ -43,7 +44,8 @@ default_cfgs = {
         input_size=(3, 384, 384),
     ),
     "mivolo_d2_224": _cfg(
-        url="https://github.com/sail-sg/volo/releases/download/volo_1/d2_224_85.2.pth.tar", crop_pct=0.96
+        url="https://github.com/sail-sg/volo/releases/download/volo_1/d2_224_85.2.pth.tar",
+        crop_pct=0.96,
     ),
     "mivolo_d2_384": _cfg(
         url="https://github.com/sail-sg/volo/releases/download/volo_1/d2_384_86.0.pth.tar",
@@ -51,7 +53,8 @@ default_cfgs = {
         input_size=(3, 384, 384),
     ),
     "mivolo_d3_224": _cfg(
-        url="https://github.com/sail-sg/volo/releases/download/volo_1/d3_224_85.4.pth.tar", crop_pct=0.96
+        url="https://github.com/sail-sg/volo/releases/download/volo_1/d3_224_85.4.pth.tar",
+        crop_pct=0.96,
     ),
     "mivolo_d3_448": _cfg(
         url="https://github.com/sail-sg/volo/releases/download/volo_1/d3_448_86.3.pth.tar",
@@ -59,7 +62,8 @@ default_cfgs = {
         input_size=(3, 448, 448),
     ),
     "mivolo_d4_224": _cfg(
-        url="https://github.com/sail-sg/volo/releases/download/volo_1/d4_224_85.7.pth.tar", crop_pct=0.96
+        url="https://github.com/sail-sg/volo/releases/download/volo_1/d4_224_85.7.pth.tar",
+        crop_pct=0.96,
     ),
     "mivolo_d4_448": _cfg(
         url="https://github.com/sail-sg/volo/releases/download/volo_1/d4_448_86.79.pth.tar",
@@ -67,7 +71,8 @@ default_cfgs = {
         input_size=(3, 448, 448),
     ),
     "mivolo_d5_224": _cfg(
-        url="https://github.com/sail-sg/volo/releases/download/volo_1/d5_224_86.10.pth.tar", crop_pct=0.96
+        url="https://github.com/sail-sg/volo/releases/download/volo_1/d5_224_86.10.pth.tar",
+        crop_pct=0.96,
     ),
     "mivolo_d5_448": _cfg(
         url="https://github.com/sail-sg/volo/releases/download/volo_1/d5_448_87.0.pth.tar",
@@ -89,7 +94,12 @@ def get_output_size(input_shape, conv_layer):
     stride = conv_layer.stride
 
     output_size = [
-        ((input_shape[i] + 2 * padding[i] - dilation[i] * (kernel_size[i] - 1) - 1) // stride[i]) + 1 for i in range(2)
+        (
+            (input_shape[i] + 2 * padding[i] - dilation[i] * (kernel_size[i] - 1) - 1)
+            // stride[i]
+        )
+        + 1
+        for i in range(2)
     ]
     return output_size
 
@@ -101,7 +111,12 @@ def get_output_size_module(input_size, stem):
         if isinstance(module, nn.Conv2d):
             output_size = [
                 (
-                    (output_size[i] + 2 * module.padding[i] - module.dilation[i] * (module.kernel_size[i] - 1) - 1)
+                    (
+                        output_size[i]
+                        + 2 * module.padding[i]
+                        - module.dilation[i] * (module.kernel_size[i] - 1)
+                        - 1
+                    )
                     // module.stride[i]
                 )
                 + 1
@@ -115,7 +130,14 @@ class PatchEmbed(nn.Module):
     """Image to Patch Embedding."""
 
     def __init__(
-        self, img_size=224, stem_conv=False, stem_stride=1, patch_size=8, in_chans=3, hidden_dim=64, embed_dim=384
+        self,
+        img_size=224,
+        stem_conv=False,
+        stem_stride=1,
+        patch_size=8,
+        in_chans=3,
+        hidden_dim=64,
+        embed_dim=384,
     ):
         super().__init__()
         assert patch_size in [4, 8, 16]
@@ -135,22 +157,35 @@ class PatchEmbed(nn.Module):
             self.conv = None
 
         if self.with_persons_model:
-
             self.proj1 = nn.Conv2d(
-                hidden_dim, embed_dim, kernel_size=patch_size // stem_stride, stride=patch_size // stem_stride
+                hidden_dim,
+                embed_dim,
+                kernel_size=patch_size // stem_stride,
+                stride=patch_size // stem_stride,
             )
             self.proj2 = nn.Conv2d(
-                hidden_dim, embed_dim, kernel_size=patch_size // stem_stride, stride=patch_size // stem_stride
+                hidden_dim,
+                embed_dim,
+                kernel_size=patch_size // stem_stride,
+                stride=patch_size // stem_stride,
             )
 
             stem_out_shape = get_output_size_module((img_size, img_size), self.conv1)
             self.proj_output_size = get_output_size(stem_out_shape, self.proj1)
 
-            self.map = CrossBottleneckAttn(embed_dim, dim_out=embed_dim, num_heads=1, feat_size=self.proj_output_size)
+            self.map = CrossBottleneckAttn(
+                embed_dim,
+                dim_out=embed_dim,
+                num_heads=1,
+                feat_size=self.proj_output_size,
+            )
 
         else:
             self.proj = nn.Conv2d(
-                hidden_dim, embed_dim, kernel_size=patch_size // stem_stride, stride=patch_size // stem_stride
+                hidden_dim,
+                embed_dim,
+                kernel_size=patch_size // stem_stride,
+                stride=patch_size // stem_stride,
             )
 
         self.patch_dim = img_size // patch_size
@@ -158,13 +193,24 @@ class PatchEmbed(nn.Module):
 
     def create_stem(self, stem_stride, in_chans, hidden_dim):
         return nn.Sequential(
-            nn.Conv2d(in_chans, hidden_dim, kernel_size=7, stride=stem_stride, padding=3, bias=False),  # 112x112
+            nn.Conv2d(
+                in_chans,
+                hidden_dim,
+                kernel_size=7,
+                stride=stem_stride,
+                padding=3,
+                bias=False,
+            ),  # 112x112
             nn.BatchNorm2d(hidden_dim),
             nn.ReLU(inplace=True),
-            nn.Conv2d(hidden_dim, hidden_dim, kernel_size=3, stride=1, padding=1, bias=False),  # 112x112
+            nn.Conv2d(
+                hidden_dim, hidden_dim, kernel_size=3, stride=1, padding=1, bias=False
+            ),  # 112x112
             nn.BatchNorm2d(hidden_dim),
             nn.ReLU(inplace=True),
-            nn.Conv2d(hidden_dim, hidden_dim, kernel_size=3, stride=1, padding=1, bias=False),  # 112x112
+            nn.Conv2d(
+                hidden_dim, hidden_dim, kernel_size=3, stride=1, padding=1, bias=False
+            ),  # 112x112
             nn.BatchNorm2d(hidden_dim),
             nn.ReLU(inplace=True),
         )
@@ -299,55 +345,92 @@ class MiVOLOModel(VOLO):
 
 def _create_mivolo(variant, pretrained=False, **kwargs):
     if kwargs.get("features_only", None):
-        raise RuntimeError("features_only not implemented for Vision Transformer models.")
+        raise RuntimeError(
+            "features_only not implemented for Vision Transformer models."
+        )
     return build_model_with_cfg(MiVOLOModel, variant, pretrained, **kwargs)
 
 
 @register_model
 def mivolo_d1_224(pretrained=False, **kwargs):
-    model_args = dict(layers=(4, 4, 8, 2), embed_dims=(192, 384, 384, 384), num_heads=(6, 12, 12, 12), **kwargs)
+    model_args = dict(
+        layers=(4, 4, 8, 2),
+        embed_dims=(192, 384, 384, 384),
+        num_heads=(6, 12, 12, 12),
+        **kwargs
+    )
     model = _create_mivolo("mivolo_d1_224", pretrained=pretrained, **model_args)
     return model
 
 
 @register_model
 def mivolo_d1_384(pretrained=False, **kwargs):
-    model_args = dict(layers=(4, 4, 8, 2), embed_dims=(192, 384, 384, 384), num_heads=(6, 12, 12, 12), **kwargs)
+    model_args = dict(
+        layers=(4, 4, 8, 2),
+        embed_dims=(192, 384, 384, 384),
+        num_heads=(6, 12, 12, 12),
+        **kwargs
+    )
     model = _create_mivolo("mivolo_d1_384", pretrained=pretrained, **model_args)
     return model
 
 
 @register_model
 def mivolo_d2_224(pretrained=False, **kwargs):
-    model_args = dict(layers=(6, 4, 10, 4), embed_dims=(256, 512, 512, 512), num_heads=(8, 16, 16, 16), **kwargs)
+    model_args = dict(
+        layers=(6, 4, 10, 4),
+        embed_dims=(256, 512, 512, 512),
+        num_heads=(8, 16, 16, 16),
+        **kwargs
+    )
     model = _create_mivolo("mivolo_d2_224", pretrained=pretrained, **model_args)
     return model
 
 
 @register_model
 def mivolo_d2_384(pretrained=False, **kwargs):
-    model_args = dict(layers=(6, 4, 10, 4), embed_dims=(256, 512, 512, 512), num_heads=(8, 16, 16, 16), **kwargs)
+    model_args = dict(
+        layers=(6, 4, 10, 4),
+        embed_dims=(256, 512, 512, 512),
+        num_heads=(8, 16, 16, 16),
+        **kwargs
+    )
     model = _create_mivolo("mivolo_d2_384", pretrained=pretrained, **model_args)
     return model
 
 
 @register_model
 def mivolo_d3_224(pretrained=False, **kwargs):
-    model_args = dict(layers=(8, 8, 16, 4), embed_dims=(256, 512, 512, 512), num_heads=(8, 16, 16, 16), **kwargs)
+    model_args = dict(
+        layers=(8, 8, 16, 4),
+        embed_dims=(256, 512, 512, 512),
+        num_heads=(8, 16, 16, 16),
+        **kwargs
+    )
     model = _create_mivolo("mivolo_d3_224", pretrained=pretrained, **model_args)
     return model
 
 
 @register_model
 def mivolo_d3_448(pretrained=False, **kwargs):
-    model_args = dict(layers=(8, 8, 16, 4), embed_dims=(256, 512, 512, 512), num_heads=(8, 16, 16, 16), **kwargs)
+    model_args = dict(
+        layers=(8, 8, 16, 4),
+        embed_dims=(256, 512, 512, 512),
+        num_heads=(8, 16, 16, 16),
+        **kwargs
+    )
     model = _create_mivolo("mivolo_d3_448", pretrained=pretrained, **model_args)
     return model
 
 
 @register_model
 def mivolo_d4_224(pretrained=False, **kwargs):
-    model_args = dict(layers=(8, 8, 16, 4), embed_dims=(384, 768, 768, 768), num_heads=(12, 16, 16, 16), **kwargs)
+    model_args = dict(
+        layers=(8, 8, 16, 4),
+        embed_dims=(384, 768, 768, 768),
+        num_heads=(12, 16, 16, 16),
+        **kwargs
+    )
     model = _create_mivolo("mivolo_d4_224", pretrained=pretrained, **model_args)
     return model
 
@@ -355,7 +438,12 @@ def mivolo_d4_224(pretrained=False, **kwargs):
 @register_model
 def mivolo_d4_448(pretrained=False, **kwargs):
     """VOLO-D4 model, Params: 193M"""
-    model_args = dict(layers=(8, 8, 16, 4), embed_dims=(384, 768, 768, 768), num_heads=(12, 16, 16, 16), **kwargs)
+    model_args = dict(
+        layers=(8, 8, 16, 4),
+        embed_dims=(384, 768, 768, 768),
+        num_heads=(12, 16, 16, 16),
+        **kwargs
+    )
     model = _create_mivolo("mivolo_d4_448", pretrained=pretrained, **model_args)
     return model
 

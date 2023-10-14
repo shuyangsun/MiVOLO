@@ -20,7 +20,13 @@ from timm.models._registry import is_model, model_entrypoint
 
 
 def load_checkpoint(
-    model, checkpoint_path, use_ema=True, strict=True, remap=False, filter_keys=None, state_dict_map=None
+    model,
+    checkpoint_path,
+    use_ema=True,
+    strict=True,
+    remap=False,
+    filter_keys=None,
+    state_dict_map=None,
 ):
     if os.path.splitext(checkpoint_path)[-1].lower() in (".npz", ".npy"):
         # numpy checkpoint, try to load via model specific load_pretrained fn
@@ -52,7 +58,9 @@ def load_checkpoint(
             if r in state_dict:
                 del state_dict[r]
 
-    incompatible_keys = model.load_state_dict(state_dict, strict=strict if filter_keys is None else False)
+    incompatible_keys = model.load_state_dict(
+        state_dict, strict=strict if filter_keys is None else False
+    )
     return incompatible_keys
 
 
@@ -79,7 +87,9 @@ def create_model(
 
     model_source, model_name = parse_model_name(model_name)
     if model_source == "hf-hub":
-        assert not pretrained_cfg, "pretrained_cfg should not be set when sourcing model from Hugging Face Hub."
+        assert (
+            not pretrained_cfg
+        ), "pretrained_cfg should not be set when sourcing model from Hugging Face Hub."
         # For model names specified in the form `hf-hub:path/architecture_name@revision`,
         # load model weights + pretrained_cfg from Hugging Face hub.
         pretrained_cfg, model_name = load_model_config_from_hf(model_name)
@@ -102,6 +112,11 @@ def create_model(
         )
 
     if checkpoint_path:
-        load_checkpoint(model, checkpoint_path, filter_keys=filter_keys, state_dict_map=state_dict_map)
+        load_checkpoint(
+            model,
+            checkpoint_path,
+            filter_keys=filter_keys,
+            state_dict_map=state_dict_map,
+        )
 
     return model

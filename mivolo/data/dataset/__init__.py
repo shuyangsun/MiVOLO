@@ -27,7 +27,6 @@ def build(
     workers: int,
     batch_size: int,
 ) -> Tuple[torch.utils.data.Dataset, torch.utils.data.DataLoader]:
-
     dataset_class = DATASET_CLASS_MAP[name]
 
     dataset: torch.utils.data.Dataset = dataset_class(

@@ -72,7 +72,6 @@ class AgeGenderDataset(torch.utils.data.Dataset):
         return None  # for regression dataset
 
     def set_ages_min_max(self, min_age: Optional[float], max_age: Optional[float]):
-
         assert all(age is None for age in [min_age, max_age]) or all(
             age is not None for age in [min_age, max_age]
         ), "Both min and max age must be passed or none of them"

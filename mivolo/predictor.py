@@ -11,7 +11,9 @@ from mivolo.structures import AGE_GENDER_TYPE, PersonAndFaceResult
 
 class Predictor:
     def __init__(self, config, verbose: bool = False):
-        self.detector = Detector(config.detector_weights, config.device, verbose=verbose)
+        self.detector = Detector(
+            config.detector_weights, config.device, verbose=verbose
+        )
         self.age_gender_model = MiVOLO(
             config.checkpoint,
             config.device,
@@ -22,7 +24,9 @@ class Predictor:
         )
         self.draw = config.draw
 
-    def recognize(self, image: np.ndarray) -> Tuple[PersonAndFaceResult, Optional[np.ndarray]]:
+    def recognize(
+        self, image: np.ndarray
+    ) -> Tuple[PersonAndFaceResult, Optional[np.ndarray]]:
         detected_objects: PersonAndFaceResult = self.detector.predict(image)
         self.age_gender_model.predict(image, detected_objects)
 

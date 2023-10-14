@@ -16,15 +16,24 @@ def get_parser():
         help="path to dataset with AgeDB folder",
     )
     parser.add_argument(
-        "--detector_weights", default=None, type=str, required=False, help="path to face and person detector"
+        "--detector_weights",
+        default=None,
+        type=str,
+        required=False,
+        help="path to face and person detector",
     )
-    parser.add_argument("--device", default="cuda:0", type=str, required=False, help="device to inference detector")
+    parser.add_argument(
+        "--device",
+        default="cuda:0",
+        type=str,
+        required=False,
+        help="device to inference detector",
+    )
 
     return parser
 
 
 if __name__ == "__main__":
-
     parser = get_parser()
     args = parser.parse_args()
 

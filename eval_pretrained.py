@@ -17,8 +17,16 @@ LOG_FREQUENCY = 10
 
 def get_parser():
     parser = argparse.ArgumentParser(description="PyTorch MiVOLO Validation")
-    parser.add_argument("--dataset_images", default="", type=str, required=True, help="path to images")
-    parser.add_argument("--dataset_annotations", default="", type=str, required=True, help="path to annotations")
+    parser.add_argument(
+        "--dataset_images", default="", type=str, required=True, help="path to images"
+    )
+    parser.add_argument(
+        "--dataset_annotations",
+        default="",
+        type=str,
+        required=True,
+        help="path to annotations",
+    )
     parser.add_argument(
         "--dataset_name",
         default=None,
@@ -27,25 +35,53 @@ def get_parser():
         choices=["utk", "imdb", "lagenda", "fairface", "adience", "agedb", "cacd"],
         help="dataset name",
     )
-    parser.add_argument("--split", default="validation", help="dataset splits separated by comma (default: validation)")
-    parser.add_argument("--checkpoint", default="", type=str, required=True, help="path to mivolo checkpoint")
+    parser.add_argument(
+        "--split",
+        default="validation",
+        help="dataset splits separated by comma (default: validation)",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        default="",
+        type=str,
+        required=True,
+        help="path to mivolo checkpoint",
+    )
 
     parser.add_argument("--batch-size", default=64, type=int, help="batch size")
     parser.add_argument(
-        "--workers", default=4, type=int, metavar="N", help="number of data loading workers (default: 4)"
-    )
-    parser.add_argument("--device", default="cuda", type=str, help="Device (accelerator) to use.")
-    parser.add_argument("--l-for-cs", type=int, default=5, help="L for CS (cumulative score)")
-
-    parser.add_argument("--half", action="store_true", default=False, help="use half-precision model")
-    parser.add_argument(
-        "--with-persons", action="store_true", default=False, help="If the model will run with persons, if available"
+        "--workers",
+        default=4,
+        type=int,
+        metavar="N",
+        help="number of data loading workers (default: 4)",
     )
     parser.add_argument(
-        "--disable-faces", action="store_true", default=False, help="If the model will use only persons if available"
+        "--device", default="cuda", type=str, help="Device (accelerator) to use."
+    )
+    parser.add_argument(
+        "--l-for-cs", type=int, default=5, help="L for CS (cumulative score)"
     )
 
-    parser.add_argument("--draw-hist", action="store_true", help="Draws the hist of error by age")
+    parser.add_argument(
+        "--half", action="store_true", default=False, help="use half-precision model"
+    )
+    parser.add_argument(
+        "--with-persons",
+        action="store_true",
+        default=False,
+        help="If the model will run with persons, if available",
+    )
+    parser.add_argument(
+        "--disable-faces",
+        action="store_true",
+        default=False,
+        help="If the model will use only persons if available",
+    )
+
+    parser.add_argument(
+        "--draw-hist", action="store_true", help="Draws the hist of error by age"
+    )
     parser.add_argument(
         "--results-file",
         default="",
@@ -54,7 +90,10 @@ def get_parser():
         help="Output csv file for validation results (summary)",
     )
     parser.add_argument(
-        "--results-format", default="csv", type=str, help="Format for results file one of (csv, json) (default: csv)."
+        "--results-format",
+        default="csv",
+        type=str,
+        help="Format for results file one of (csv, json) (default: csv).",
     )
 
     return parser
@@ -66,7 +105,6 @@ def process_batch(
     target: torch.tensor,
     num_classes_gender: int = 2,
 ):
-
     start = time_sync()
     output = mivolo_model.inference(input)
     # target with age == -1 and gender == -1 marks that sample is not valid
@@ -94,13 +132,17 @@ def _filter_invalid_target(out: torch.tensor, target: torch.tensor):
     return out[mask], target[mask]
 
 
-def postprocess_gender(gender_out: torch.tensor, gender_target: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
+def postprocess_gender(
+    gender_out: torch.tensor, gender_target: torch.tensor
+) -> Tuple[torch.tensor, torch.tensor]:
     if gender_target is None:
         return gender_out, gender_target
     return _filter_invalid_target(gender_out, gender_target)
 
 
-def postprocess_age(age_out: torch.tensor, age_target: torch.tensor, dataset) -> Tuple[torch.tensor, torch.tensor]:
+def postprocess_age(
+    age_out: torch.tensor, age_target: torch.tensor, dataset
+) -> Tuple[torch.tensor, torch.tensor]:
     # Revert _norm_age() operation. Output is 2 float tensors
 
     age_out, age_target = _filter_invalid_target(age_out, age_target)
@@ -122,7 +164,6 @@ def postprocess_age(age_out: torch.tensor, age_target: torch.tensor, dataset) ->
 
 
 def validate(args):
-
     if torch.cuda.is_available():
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.benchmark = True
@@ -153,7 +194,6 @@ def validate(args):
 
     preproc_end = time_sync()
     for batch_idx, (input, target) in enumerate(loader):
-
         preprocess_time = time_sync() - preproc_end
         # get output and calculate loss
         age_out, age_target, gender_out, gender_target, process_time = process_batch(
@@ -172,7 +212,8 @@ def validate(args):
 
         if batch_idx % LOG_FREQUENCY == 0:
             _logger.info(
-                "Test: [{0:>4d}/{1}]  " "{2}".format(batch_idx, len(loader), d_stat.get_info_str(input.size(0)))
+                "Test: [{0:>4d}/{1}]  "
+                "{2}".format(batch_idx, len(loader), d_stat.get_info_str(input.size(0)))
             )
 
         preproc_end = time_sync()
@@ -204,11 +245,17 @@ def main():
 
     results = validate(args)
 
-    result_str = " * Age Acc@1 {:.3f} ({:.3f})".format(results["agetop1"], results["agetop1_err"])
+    result_str = " * Age Acc@1 {:.3f} ({:.3f})".format(
+        results["agetop1"], results["agetop1_err"]
+    )
     if "gendertop1" in results:
-        result_str += " Gender Acc@1 1 {:.3f} ({:.3f})".format(results["gendertop1"], results["gendertop1_err"])
-    result_str += " Mean inference time {:.3f} ms Mean preprocessing time {:.3f}".format(
-        results["mean_inference_time"], results["mean_preprocessing_time"]
+        result_str += " Gender Acc@1 1 {:.3f} ({:.3f})".format(
+            results["gendertop1"], results["gendertop1_err"]
+        )
+    result_str += (
+        " Mean inference time {:.3f} ms Mean preprocessing time {:.3f}".format(
+            results["mean_inference_time"], results["mean_preprocessing_time"]
+        )
     )
     _logger.info(result_str)
 

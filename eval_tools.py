@@ -66,7 +66,9 @@ class Metrics:
 
         if self.draw_hist:
             for i in range(age_out.shape[0]):
-                self.per_age_error[int(age_target[i].item())].append(age_abs_err[i].item())
+                self.per_age_error[int(age_target[i].item())].append(
+                    age_abs_err[i].item()
+                )
 
     def update_age_accuracy(self, age_out, age_target):
         batch_size = age_out.size(0)
@@ -93,7 +95,9 @@ class Metrics:
         self.preproc_batch_time.update(preprocess_time)
 
     def get_info_str(self, batch_size):
-        avg_time = (self.preproc_batch_time.sum + self.batch_time.sum) / self.batch_time.count
+        avg_time = (
+            self.preproc_batch_time.sum + self.batch_time.sum
+        ) / self.batch_time.count
         cur_time = self.batch_time.val + self.preproc_batch_time.val
         middle_info = (
             "Time: {cur_time:.3f}s ({avg_time:.3f}s, {rate_avg:>7.2f}/s)  "
@@ -112,11 +116,16 @@ class Metrics:
                 "Age CS@{l_for_cs}: {csl.val:>7.4f} ({csl.avg:>7.4f})  "
                 "Age CE@20: {max_error.val:>7.4f} ({max_error.avg:>7.4f})  "
                 "Age ME: {top1age.val:>7.2f} ({top1age.avg:>7.2f})".format(
-                    top1age=self.top1_m_age, csl=self.av_csl_age, max_error=self.max_error, l_for_cs=self.l_for_cs
+                    top1age=self.top1_m_age,
+                    csl=self.av_csl_age,
+                    max_error=self.max_error,
+                    l_for_cs=self.l_for_cs,
                 )
             )
         else:
-            age_info = "Age Acc: {top1age.val:>7.2f} ({top1age.avg:>7.2f})".format(top1age=self.top1_m_age)
+            age_info = "Age Acc: {top1age.val:>7.2f} ({top1age.avg:>7.2f})".format(
+                top1age=self.top1_m_age
+            )
 
         return middle_info + age_info
 
@@ -144,6 +153,11 @@ class Metrics:
             )
 
         if gender_top1 is not None:
-            results.update(dict(gendertop1=round(gender_top1, 4), gendertop1_err=round(100 - gender_top1, 4)))
+            results.update(
+                dict(
+                    gendertop1=round(gender_top1, 4),
+                    gendertop1_err=round(100 - gender_top1, 4),
+                )
+            )
 
         return results

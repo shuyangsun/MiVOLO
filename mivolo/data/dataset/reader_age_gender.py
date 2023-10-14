@@ -6,7 +6,12 @@ from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
-from mivolo.data.data_reader import AnnotType, PictureInfo, get_all_files, read_csv_annotation_file
+from mivolo.data.data_reader import (
+    AnnotType,
+    PictureInfo,
+    get_all_files,
+    read_csv_annotation_file,
+)
 from mivolo.data.misc import IOU, class_letterbox
 from timm.data.readers.reader import Reader
 from tqdm import tqdm
@@ -69,7 +74,9 @@ class ReaderAgeGender(Reader):
         # Reading annotations. Can be multiple files if annotations_path dir
         self._ann: Dict[str, List[PictureInfo]] = {}  # list of samples for each image
         self._associated_objects: Dict[str, Dict[int, List[List[int]]]] = {}
-        self._faces_list: List[Tuple[str, int]] = []  # samples from this list will be loaded in __getitem__
+        self._faces_list: List[
+            Tuple[str, int]
+        ] = []  # samples from this list will be loaded in __getitem__
 
         self._read_annotations(images_path, annotations_path)
         _logger.info(f"Dataset length: {len(self._faces_list)} crops")
@@ -90,7 +97,11 @@ class ReaderAgeGender(Reader):
         self._associated_objects = {}
 
         csvs = get_all_files(csvs_path, [".csv"])
-        csvs = [c for c in csvs if any(split_name in os.path.basename(c) for split_name in self.splits)]
+        csvs = [
+            c
+            for c in csvs
+            if any(split_name in os.path.basename(c) for split_name in self.splits)
+        ]
 
         # load annotations per image
         for csv in csvs:
@@ -129,7 +140,9 @@ class ReaderAgeGender(Reader):
 
         if not self.with_persons and face_empty:
             # model without persons
-            raise ValueError("Annotations must be checked with self.prepare_annotations() func")
+            raise ValueError(
+                "Annotations must be checked with self.prepare_annotations() func"
+            )
 
         if face_empty:
             face_crop = self.empty_crop
@@ -147,7 +160,9 @@ class ReaderAgeGender(Reader):
                 )
 
             if face_empty and person_empty:
-                raise ValueError("Annotations must be checked with self.prepare_annotations() func")
+                raise ValueError(
+                    "Annotations must be checked with self.prepare_annotations() func"
+                )
 
         if person_empty:
             person_crop = self.empty_crop
@@ -161,7 +176,6 @@ class ReaderAgeGender(Reader):
         asced_objects=None,
         crop_out_color=(0, 0, 0),
     ) -> Tuple[np.ndarray, bool]:
-
         empty_bbox = False
 
         xmin, ymin, xmax, ymax = bbox
@@ -185,11 +199,12 @@ class ReaderAgeGender(Reader):
             if empty_bbox:
                 crop = self.empty_crop
 
-        crop = class_letterbox(crop, new_shape=(self.target_size, self.target_size), color=crop_out_color)
+        crop = class_letterbox(
+            crop, new_shape=(self.target_size, self.target_size), color=crop_out_color
+        )
         return crop, empty_bbox
 
     def prepare_annotations(self):
-
         good_anns: Dict[str, List[PictureInfo]] = {}
         all_associated_objects: Dict[str, Dict[int, List[List[int]]]] = {}
 
@@ -224,7 +239,14 @@ class ReaderAgeGender(Reader):
                 total=len(self._ann),
             )
 
-            for (img_info, associated_objects, msgs, is_corrupted, is_empty_annotations, skipped_crops) in pbar:
+            for (
+                img_info,
+                associated_objects,
+                msgs,
+                is_corrupted,
+                is_empty_annotations,
+                skipped_crops,
+            ) in pbar:
                 broken += 1 if is_corrupted else 0
                 all_msgs.extend(msgs)
                 all_skipped_crops += skipped_crops
@@ -319,10 +341,14 @@ def verify_images(
             skipped_crops += 1
 
     # sort that samples with undefined age and gender be the last
-    out_samples = sorted(out_samples, key=lambda sample: 1 if not sample.has_gt(only_age) else 0)
+    out_samples = sorted(
+        out_samples, key=lambda sample: 1 if not sample.has_gt(only_age) else 0
+    )
 
     # for each person find other faces and persons bboxes, intersected with it
-    associated_objects: Dict[int, List[List[int]]] = find_associated_objects(out_samples, only_age=only_age)
+    associated_objects: Dict[int, List[List[int]]] = find_associated_objects(
+        out_samples, only_age=only_age
+    )
 
     out_samples, associated_objects, skipped_crops = filter_bad_samples(
         out_samples, associated_objects, im_cv, msgs, skipped_crops, **kwargs
@@ -333,7 +359,14 @@ def verify_images(
         out_img_info = None
         is_empty_annotations = True
 
-    return out_img_info, associated_objects, msgs, is_corrupted, is_empty_annotations, skipped_crops
+    return (
+        out_img_info,
+        associated_objects,
+        msgs,
+        is_corrupted,
+        is_empty_annotations,
+        skipped_crops,
+    )
 
 
 def filter_bad_samples(
@@ -344,7 +377,14 @@ def filter_bad_samples(
     skipped_crops: int,
     **kwargs,
 ):
-    with_persons, disable_faces, min_person_size, crop_round_tol, min_person_aftercut_ratio, only_age = (
+    (
+        with_persons,
+        disable_faces,
+        min_person_size,
+        crop_round_tol,
+        min_person_aftercut_ratio,
+        only_age,
+    ) = (
         kwargs["with_persons"],
         kwargs["disable_faces"],
         kwargs["min_person_size"],
@@ -354,8 +394,14 @@ def filter_bad_samples(
     )
 
     # left only samples with annotations
-    inds = [sample_ind for sample_ind, sample in enumerate(out_samples) if sample.has_gt(only_age)]
-    out_samples, associated_objects = _filter_by_ind(out_samples, associated_objects, inds)
+    inds = [
+        sample_ind
+        for sample_ind, sample in enumerate(out_samples)
+        if sample.has_gt(only_age)
+    ]
+    out_samples, associated_objects = _filter_by_ind(
+        out_samples, associated_objects, inds
+    )
 
     if kwargs["disable_faces"]:
         # clear all faces
@@ -363,8 +409,14 @@ def filter_bad_samples(
             sample.clear_face_bbox()
 
         # left only samples with person_bbox
-        inds = [sample_ind for sample_ind, sample in enumerate(out_samples) if sample.has_person_bbox]
-        out_samples, associated_objects = _filter_by_ind(out_samples, associated_objects, inds)
+        inds = [
+            sample_ind
+            for sample_ind, sample in enumerate(out_samples)
+            if sample.has_person_bbox
+        ]
+        out_samples, associated_objects = _filter_by_ind(
+            out_samples, associated_objects, inds
+        )
 
     if with_persons or disable_faces:
         # check that preprocessing func
@@ -391,7 +443,9 @@ def filter_bad_samples(
                 skipped_crops += 1
             else:
                 inds.append(ind)
-        out_samples, associated_objects = _filter_by_ind(out_samples, associated_objects, inds)
+        out_samples, associated_objects = _filter_by_ind(
+            out_samples, associated_objects, inds
+        )
 
     assert len(associated_objects) == len(out_samples)
     return out_samples, associated_objects, skipped_crops
@@ -418,9 +472,13 @@ def find_associated_objects(
 
     for iindex, image_sample_info in enumerate(image_samples):
         # add own face
-        associated_objects[iindex] = [image_sample_info.bbox] if image_sample_info.has_face_bbox else []
+        associated_objects[iindex] = (
+            [image_sample_info.bbox] if image_sample_info.has_face_bbox else []
+        )
 
-        if not image_sample_info.has_person_bbox or not image_sample_info.has_gt(only_age):
+        if not image_sample_info.has_person_bbox or not image_sample_info.has_gt(
+            only_age
+        ):
             # if sample has not gt => not be used
             continue
 
@@ -465,8 +523,12 @@ def _cropout_asced_objs(
         crop[aobj_ymin:aobj_ymax, aobj_xmin:aobj_xmax] = crop_out_color
 
     # calc useful non-black area
-    remain_ratio = np.count_nonzero(crop) / (crop.shape[0] * crop.shape[1] * crop.shape[2])
-    if (crop.shape[0] < min_person_size or crop.shape[1] < min_person_size) or remain_ratio < min_person_aftercut_ratio:
+    remain_ratio = np.count_nonzero(crop) / (
+        crop.shape[0] * crop.shape[1] * crop.shape[2]
+    )
+    if (
+        crop.shape[0] < min_person_size or crop.shape[1] < min_person_size
+    ) or remain_ratio < min_person_aftercut_ratio:
         crop = None
         empty = True
 

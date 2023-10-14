@@ -10,7 +10,10 @@ if __name__ == "__main__":
     os.makedirs(out_dir, exist_ok=True)
 
     ids = ["1QXO0NlkABPZT6x1_0Uc2i6KAtdcrpTbG", "1mNYjYFb3MuKg-OL1UISoYsKObMUllbJx"]
-    dests = [f"{out_dir}/lagenda_benchmark_images.zip", f"{out_dir}/lagenda_annotation.csv"]
+    dests = [
+        f"{out_dir}/lagenda_benchmark_images.zip",
+        f"{out_dir}/lagenda_annotation.csv",
+    ]
 
     for file_id, destination in zip(ids, dests):
         url = f"https://drive.google.com/uc?id={file_id}"
