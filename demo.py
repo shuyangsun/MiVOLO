@@ -97,7 +97,7 @@ def get_parser():
         help="If set, resulted images will be drawn",
     )
     parser.add_argument(
-        "--device", default="cuda", type=str, help="Device (accelerator) to use."
+        "--device", default="cuda:0", type=str, help="Device (accelerator) to use."
     )
 
     return parser
