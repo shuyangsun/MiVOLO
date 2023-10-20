@@ -84,7 +84,7 @@ class MiVOLO:
     def __init__(
         self,
         ckpt_path: str,
-        device: str = "cuda",
+        device: str = "cuda:0",
         half: bool = True,
         disable_faces: bool = False,
         use_persons: bool = True,
