@@ -210,12 +210,12 @@ def main():
         device_postfix: str = args.device.replace(":", "")
         torch.save(
             model_trt.state_dict(),
-            os.path.join(args.out, f"yunet_n_trt_b{args.batch}_{device_postfix}.pth"),
+            os.path.join(args.out, f"mivolo_trt_b{args.batch}_{device_postfix}.pth"),
         )
 
         print("Converted TensorRT model done.")
         engine_file = os.path.join(
-            args.out, f"yunet_n_trt_b{args.batch}_{device_postfix}.engine"
+            args.out, f"mivolo_trt_b{args.batch}_{device_postfix}.engine"
         )
         with open(engine_file, "wb") as f:
             f.write(model_trt.engine.serialize())
