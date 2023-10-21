@@ -1,4 +1,5 @@
 import argparse
+import time
 import os
 import cv2
 import torch
@@ -7,6 +8,7 @@ import torchvision.transforms.functional as F
 import numpy as np
 
 from mivolo.model.mi_volo import MiVOLO
+from torch2trt import torch2trt
 
 from typing import List, Tuple, Set, Union
 
@@ -34,17 +36,25 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "-s",
-        "--samples",
+        "--inputs",
         required=False,
         type=str,
         help="Sample input directory.",
     )
     parser.add_argument(
         "-b",
-        "--batch-size",
+        "--batch",
         required=True,
         type=int,
         help="batch size",
+    )
+    parser.add_argument(
+        "-i",
+        "--iters",
+        required=False,
+        type=int,
+        default=512,
+        help="number of iterations on samples to test performance",
     )
     parser.add_argument(
         "-o",
@@ -56,8 +66,8 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _get_default_samples(batch_size: int) -> torch.Tensor:
-    return torch.ones((batch_size, 6, _IMG_SIZE, _IMG_SIZE)).type(torch.float16)
+def _get_default_samples(batch: int) -> torch.Tensor:
+    return torch.ones((batch, 6, _IMG_SIZE, _IMG_SIZE)).half()
 
 
 def _get_sample_files(dir_path: str) -> List[Tuple[str, Union[None, str]]]:
@@ -107,11 +117,11 @@ def _preproc_image(img: np.ndarray, scale_up=True) -> torch.Tensor:
     img = np.ascontiguousarray(img)
     img = torch.from_numpy(img)
     img = img.unsqueeze(0)
-    return img
+    return img.half()
 
 
 def _get_sample_inputs(
-    files: List[Tuple[str, Union[None, str]]], batch_size: int
+    files: List[Tuple[str, Union[None, str]]], batch: int
 ) -> torch.Tensor:
     assert len(files) > 0
     res: Union[None, torch.Tensor] = None
@@ -129,30 +139,85 @@ def _get_sample_inputs(
             res = sample
         else:
             res = torch.cat((res, sample), dim=0)
-    if res.shape[0] >= batch_size:
-        return res[:batch_size]
-    size_diff: int = batch_size - res.shape[0]
+    if res.shape[0] >= batch:
+        return res[:batch]
+    size_diff: int = batch - res.shape[0]
     res = torch.cat((res, res[:size_diff]), dim=0)
     return res.half()
 
 
-if __name__ == "__main__":
+@torch.no_grad()
+def main():
     parser: argparse.ArgumentParser = _build_arg_parser()
     args = parser.parse_args()
 
-    model = MiVOLO(
-        args.checkpoint,
-        args.device,
-        half=True,
-        use_persons=True,
-        disable_faces=False,
-        verbose=False,
-        torchcompile=None,
-    )
-
-    samples: np.ndarray = _get_default_samples(args.batch_size)
-    if args.samples is not None and len(args.samples) > 0:
-        sample_files: List[Tuple[str, Union[None, str]]] = _get_sample_files(
-            args.samples
+    with torch.cuda.device(args.device):
+        model = MiVOLO(
+            args.checkpoint,
+            args.device,
+            half=True,
+            use_persons=True,
+            disable_faces=False,
+            verbose=False,
+            torchcompile=None,
         )
-        samples = _get_sample_inputs(sample_files, args.batch_size)
+
+        inputs: torch.Tensor = _get_default_samples(args.batch)
+        if args.inputs is not None and len(args.inputs) > 0:
+            sample_files: List[Tuple[str, Union[None, str]]] = _get_sample_files(
+                args.inputs
+            )
+            inputs = _get_sample_inputs(sample_files, args.batch)
+        inputs = inputs.device(args.device)
+        inputs = [inputs]
+
+        num_frames = int((((args.iters - 1) // args.batch) + 1) * args.batch)
+        start = time.time()
+        for _ in range(num_frames // args.batch):
+            with torch.no_grad():
+                pred = model(inputs[0])
+
+        print(
+            "PyTorch model fps (avg of {num} samples): {fps:.1f}".format(
+                num=num_frames, fps=num_frames / (time.time() - start)
+            )
+        )
+
+        model_trt = torch2trt(
+            model,
+            inputs,
+            fp16_mode=True,
+            log_level=trt.Logger.INFO,
+            max_workspace_size=(1 << args.workspace),
+            max_batch_size=args.batch,
+        )
+
+        # model(inputs[0]) # populate model.head
+        start = time.time()
+        for _ in range(num_frames // args.batch):
+            pred = model_trt(inputs[0])
+            # model.head.decode_outputs(pred, dtype=torch.float16, device="cuda:0")
+        print(
+            "TensorRT model fps (avg of {num} inputs): {fps:.1f}".format(
+                num=num_frames, fps=num_frames / (time.time() - start)
+            )
+        )
+
+        device_postfix: str = args.device.replace(":", "")
+        torch.save(
+            model_trt.state_dict(),
+            os.path.join(args.out, f"yunet_n_trt_b{args.batch}_{device_postfix}.pth"),
+        )
+
+        print("Converted TensorRT model done.")
+        engine_file = os.path.join(
+            args.out, f"yunet_n_trt_b{args.batch}_{device_postfix}.engine"
+        )
+        with open(engine_file, "wb") as f:
+            f.write(model_trt.engine.serialize())
+
+        print("Converted TensorRT model engine file is saved for C++ inference.")
+
+
+if __name__ == "__main__":
+    main()
