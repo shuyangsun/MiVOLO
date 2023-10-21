@@ -18,6 +18,10 @@ _IMG_SIZE: int = 224
 _IMG_MEAN: np.ndarray = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 _IMG_STD: np.ndarray = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
+_AGE_MIN: int = 1
+_AGE_MAX: int = 95
+_AGE_MEAN: int = 48
+
 
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser: argparse.ArgumentParser = argparse.ArgumentParser("mivolo trt")
@@ -151,6 +155,17 @@ def _get_sample_inputs(
     return res.half()
 
 
+def _postprocess(output: torch.Tensor) -> torch.Tensor:
+    age = output[:, 2:3]
+    gender_output = output[:, :2].softmax(-1)
+    gender_probs, gender = gender_output.topk(1)
+    age = age * (_AGE_MAX - _AGE_MIN) + _AGE_MEAN
+    gender[gender == 0] = 82  # male
+    gender[gender == 1] = 83  # female
+    res = torch.cat((age, gender_probs, gender), dim=1)
+    return res
+
+
 @torch.no_grad()
 def main():
     parser: argparse.ArgumentParser = _build_arg_parser()
@@ -178,6 +193,13 @@ def main():
 
         num_frames = int((((args.iters - 1) // args.batch) + 1) * args.batch)
         start = time.time()
+        pred = model(inputs[0])
+        res = _postprocess(pred)
+        print("age: ", torch.mean(res[:, 0]))
+        male_probs = res[:, 1]
+        female_mask = res[:, 2] == 83
+        male_probs[female_mask] = 1 - male_probs[female_mask]
+        print(torch.mean(male_probs))
         for _ in range(num_frames // args.batch):
             with torch.no_grad():
                 pred = model(inputs[0])
@@ -187,6 +209,7 @@ def main():
                 num=num_frames, fps=num_frames / (time.time() - start)
             )
         )
+        exit()
 
         model_trt = torch2trt(
             model,
