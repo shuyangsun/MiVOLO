@@ -143,10 +143,9 @@ def _get_sample_inputs(
             res = sample
         else:
             res = torch.cat((res, sample), dim=0)
-    if res.shape[0] >= batch:
-        return res[:batch]
-    size_diff: int = batch - res.shape[0]
-    res = torch.cat((res, res[:size_diff]), dim=0)
+    while res.shape[0] < batch:
+        size_diff: int = batch - res.shape[0]
+        res = torch.cat((res, res[:size_diff]), dim=0)
     return res.half()
 
 
