@@ -4,4 +4,5 @@ timm==0.8.13.dev0
 yt_dlp
 lapx>=0.5.2
 torch==2.0.1
-tensorrt==8.6.1
+tensorrt==8.6.1.post1
+torch2trt @ git+https://github.com/NVIDIA-AI-IOT/torch2trt.git@36656b6 # version as of 2023-04-28

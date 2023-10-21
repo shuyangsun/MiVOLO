@@ -4,8 +4,9 @@ import os
 import cv2
 import torch
 
-import torchvision.transforms.functional as F
 import numpy as np
+import tensorrt as trt
+import torchvision.transforms.functional as F
 
 from mivolo.model.mi_volo import MiVOLO
 from torch2trt import torch2trt
@@ -47,6 +48,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         required=True,
         type=int,
         help="batch size",
+    )
+    parser.add_argument(
+        "-w", "--workspace", type=int, default=32, help="max workspace size in detect"
     )
     parser.add_argument(
         "-i",
