@@ -172,7 +172,7 @@ def main():
                 args.inputs
             )
             inputs = _get_sample_inputs(sample_files, args.batch)
-        inputs = inputs.device(args.device)
+        inputs = inputs.to(args.device)
         inputs = [inputs]
 
         num_frames = int((((args.iters - 1) // args.batch) + 1) * args.batch)
