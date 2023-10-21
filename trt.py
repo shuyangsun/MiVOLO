@@ -111,7 +111,7 @@ def _preproc_image(img: np.ndarray, scale_up=True) -> torch.Tensor:
 
 
 def _get_sample_inputs(
-    files: List[Tuple[str, Union[None, str]]], batch_size: int, dtype=torch.float16
+    files: List[Tuple[str, Union[None, str]]], batch_size: int
 ) -> torch.Tensor:
     assert len(files) > 0
     res: Union[None, torch.Tensor] = None
@@ -120,21 +120,20 @@ def _get_sample_inputs(
         face: Union[None, torch.Tensor] = None
         if face_f is None:
             face = torch.zeros((3, _IMG_SIZE, _IMG_SIZE), dtype=torch.float32)
-            img = F.normalize(img, mean=_IMG_STD, std=_IMG_STD)
-            img = img.unsqueeze(0)
+            face = F.normalize(face, mean=_IMG_STD, std=_IMG_STD)
+            face = face.unsqueeze(0)
         else:
-            face: np.ndarray = cv2.imread(face_f)
-            face = torch.permute(face, (2, 0, 1))
+            face = _preproc_image(cv2.imread(face_f))
         sample: torch.Tensor = torch.cat((person, face), dim=1)
         if res is None:
             res = sample
         else:
             res = torch.cat((res, sample), dim=0)
     if res.shape[0] >= batch_size:
-        return res[:batch_size].type(dtype)
+        return res[:batch_size]
     size_diff: int = batch_size - res.shape[0]
     res = torch.cat((res, res[:size_diff]), dim=0)
-    return res
+    return res.half()
 
 
 if __name__ == "__main__":
