@@ -138,7 +138,7 @@ def _get_sample_inputs(
         face: Union[None, torch.Tensor] = None
         if face_f is None:
             face = torch.zeros((3, _IMG_SIZE, _IMG_SIZE), dtype=torch.float32)
-            face = F.normalize(face, mean=_IMG_STD, std=_IMG_STD)
+            face = F.normalize(face, mean=_IMG_MEAN, std=_IMG_STD)
             face = face.unsqueeze(0)
         else:
             face = _preproc_image(cv2.imread(face_f))
