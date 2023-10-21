@@ -14,7 +14,7 @@ from torch2trt import torch2trt
 from typing import List, Tuple, Set, Union
 
 
-_IMG_SIZE: int = 640
+_IMG_SIZE: int = 224
 _IMG_MEAN: np.ndarray = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 _IMG_STD: np.ndarray = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 

@@ -135,7 +135,7 @@ class PatchEmbed(nn.Module):
         stem_conv=False,
         stem_stride=1,
         patch_size=8,
-        in_chans=3,
+        in_chans=6,
         hidden_dim=64,
         embed_dim=384,
     ):
