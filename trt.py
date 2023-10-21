@@ -164,7 +164,7 @@ def main():
             disable_faces=False,
             verbose=False,
             torchcompile=None,
-        )
+        ).model
 
         inputs: torch.Tensor = _get_default_samples(args.batch)
         if args.inputs is not None and len(args.inputs) > 0:
